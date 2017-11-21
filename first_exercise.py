@@ -95,11 +95,34 @@ def disk_contour(distance,centre_ra=0,centre_dec=0):
     
     levels=np.linspace(0,peak_flux,20)
 
+    ra_units=[]
+    ra_array=np.zeros(len(ra))
+    dec_units=[]
+    dec_array=np.zeros(len(dec))
+    for i in range(len(ra)):
+        ra_units.append(RightAscension(ra[i]))
+        dec_units.append(Declination(dec[i]))
+        ra_array[i]=ra_units[i].seconds
+        dec_array[i]=dec_units[i].seconds
+
+
     z=G(xx,yy)
-    plt.contourf(ra,dec,z,levels)
-    plt.xlabel('Right ascension')
-    plt.ylabel('Declination')
-    plt.colorbar()
+    fig=plt.figure(figsize=(8,6))
+    ax1=fig.add_subplot(111)
+    im=plt.contourf(ra,dec,z,levels)
+    ax2=ax1.twinx()
+    ax2.plot(dec,ra_array,alpha=0.0)
+    ax3=ax1.twiny()
+    ax3.plot(dec_array,ra,alpha=0.0)
+
+    ax1.set_xlim(np.amin(ra),np.amax(ra))
+    ax1.set_ylim(np.amin(dec),np.amax(dec))
+    ax1.set_xlabel('Right ascension',labelpad=30)
+    ax1.set_ylabel('Declination',labelpad=30)
+    ax1.tick_params('both',labelbottom=0,labeltop=0,labelleft=0,labelright=0)
+    ax2.tick_params('y',labelleft='on',labelright='off')
+    ax3.tick_params('x',labeltop='off',labelbottom='on')
+    fig.colorbar(im,ax=[ax1,ax2,ax3],pad=0.1)
     plt.show()
 
     return peak_flux

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 from astropy.modeling import functional_models
 import random
 
@@ -16,44 +17,50 @@ class Declination:
         self.seconds=(angle-self.degrees*(np.pi/180)-self.minutes*(np.pi/(180*60)))/(np.pi/(180*60*60))
 
         
-def disk_distance_plot(band_no):
+def disk_distance_plot(band_nos):
 
-    if band_no==3:
-        T_sys=67 #Band 3 parameters
-        freq_lower=8.4*10**10
-        freq_upper=1.16*10**11
-        aperture_eff=0.69
-        ref_flux=2.6*10**-28 #band 3 flux for HD 100546 in Wm-2Hz-1 from SED
-    elif band_no==7:
-        T_sys=251
-        freq_lower=2.75*10**11
-        freq_upper=3.7*10**11
-        aperture_eff=0.74
-        ref_flux=8*10**-24 #band 7 flux for HD 100546 in Wm-2Hz-1 from SED
+    for band_no in band_nos:
+        if band_no==3:
+            T_sys=67 #Band 3 parameters
+            freq_lower=8.4*10**10
+            freq_upper=1.16*10**11
+            aperture_eff=0.69
+            ref_flux=2.6*10**-28 #band 3 flux for HD 100546 in Wm-2Hz-1 from SED
+        elif band_no==7:
+            T_sys=251
+            freq_lower=2.75*10**11
+            freq_upper=3.7*10**11
+            aperture_eff=0.74
+            ref_flux=8*10**-24 #band 7 flux for HD 100546 in Wm-2Hz-1 from SED
 
-    obs_time=3600 #observing time in seconds
+        obs_time=3600 #observing time in seconds
 
-    sigma=T_sys/((freq_upper-freq_lower)*obs_time)**0.5 #rms noise
+        sigma=T_sys/((freq_upper-freq_lower)*obs_time)**0.5 #rms noise
 
-    ref_temp=aperture_eff*12**2*ref_flux*10**26/3514.0
+        ref_temp=aperture_eff*12**2*ref_flux*10**26/3514.0
 
-    ref_snr=ref_temp/sigma
+        ref_snr=ref_temp/sigma
 
-    distance=np.logspace(2,6,50)
-    snr=np.zeros(len(distance))
+        distance=np.logspace(2,6,50)
+        snr=np.zeros(len(distance))
 
-    for d in range(len(distance)):
-        snr[d]=ref_snr*10**4/float(distance[d])**2
+        for d in range(len(distance)):
+            snr[d]=ref_snr*10**4/float(distance[d])**2
 
-    plt.plot(distance,snr)
+        plt.plot(distance,snr,linewidth=2)
+        plt.ylim(0,10)
+        plt.xscale('log')
+        plt.xlabel('distance / pc')
+        plt.ylabel('signal to noise ratio / sigma')
+    plt.title('SNR of HD 100546 at different distances')
+    plt.plot(distance,5*np.ones(len(distance)),'r')
+    plt.legend(['Band 3','Band 7'])
     plt.show()
-    plt.ylim(0,10)
-    plt.xscale('log')
-    plt.xlabel('distance / pc')
-    plt.ylabel('signal to noise ratio / sigma')
 
 def disk_contour(distance,centre_ra=0,centre_dec=0):
     
+    #Note: for HD 100546 use ra=3.0256, dec=-1.22513
+
     distance=float(distance)
     ra=np.arange(centre_ra-(8.73*10**-8*100),centre_ra+(8.73*10**-8*100),8.73*10**-8)
     dec=np.arange(centre_dec-(8.73*10**-8*100),centre_dec+(8.73*10**-8*100),8.73*10**-8)
@@ -105,9 +112,8 @@ def disk_contour(distance,centre_ra=0,centre_dec=0):
         ra_array[i]=ra_units[i].seconds
         dec_array[i]=dec_units[i].seconds
 
-
     z=G(xx,yy)
-    fig=plt.figure(figsize=(8,6))
+    fig=plt.figure(figsize=(10,7.5))
     ax1=fig.add_subplot(111)
     im=plt.contourf(ra,dec,z,levels)
     ax2=ax1.twinx()
@@ -117,11 +123,18 @@ def disk_contour(distance,centre_ra=0,centre_dec=0):
 
     ax1.set_xlim(np.amin(ra),np.amax(ra))
     ax1.set_ylim(np.amin(dec),np.amax(dec))
-    ax1.set_xlabel('Right ascension',labelpad=30)
-    ax1.set_ylabel('Declination',labelpad=30)
+    ax1.set_xlabel('Right ascension / seconds',labelpad=25)
+    ax1.set_ylabel('Declination / seconds',labelpad=40)
     ax1.tick_params('both',labelbottom=0,labeltop=0,labelleft=0,labelright=0)
     ax2.tick_params('y',labelleft='on',labelright='off')
     ax3.tick_params('x',labeltop='off',labelbottom='on')
+
+    plt.figtext(0.07,0.93,str(dec_units[0].degrees)+' deg '+str(dec_units[0].minutes)+' min')
+    plt.figtext(0.7,0.05,str(ra_units[0].hours)+' hrs '+str(ra_units[0].minutes)+' min')
+    ax2.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax3.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    plt.title('HD 100546 in Band 7 at '+str(distance)+' pc')
+
     fig.colorbar(im,ax=[ax1,ax2,ax3],pad=0.1)
     plt.show()
 

@@ -1,0 +1,199 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Basic setup. Most papers should leave these options alone.
+\documentclass[a4paper,fleqn,usenatbib]{mnras}
+
+% MNRAS is set in Times font. If you don't have this installed (most LaTeX
+% installations will be fine) or prefer the old Computer Modern fonts, comment
+% out the following line
+\usepackage{newtxtext,newtxmath}
+% Depending on your LaTeX fonts installation, you might get better results with one of these:
+%\usepackage{mathptmx}
+%\usepackage{txfonts}
+
+% Use vector fonts, so it zooms properly in on-screen viewing software
+% Don't change these lines unless you know what you are doing
+\usepackage[T1]{fontenc}
+\usepackage{ae,aecompl}
+
+
+%%%%% AUTHORS - PLACE YOUR OWN PACKAGES HERE %%%%%
+
+% Only include extra packages if you really need them. Common packages are:
+\usepackage{graphicx}	% Including figure files
+\usepackage{amsmath}	% Advanced maths commands
+\usepackage{amssymb}	% Extra maths symbols
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%% AUTHORS - PLACE YOUR OWN COMMANDS HERE %%%%%
+
+% Please keep new commands to a minimum, and use \newcommand not \def to avoid
+% overwriting existing commands. Example:
+%\newcommand{\pcm}{\,cm$^{-2}$}	% per cm-squared
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%% TITLE PAGE %%%%%%%%%%%%%%%%%%%
+
+% Title of the paper, and the short title which is used in the headers.
+% Keep the title short and informative.
+\title[Observations of planet formation]{Expanding the observational frontier of planet formation}
+
+% The list of authors, and the short list which is used in the headers.
+% If you need two or more lines of authors, add an extra line using \newauthor
+\author[M. Nixon]{
+Matthew Nixon
+}
+
+% Enter the current year, for the copyright statements etc.
+\pubyear{2017}
+
+% Don't change these lines
+\begin{document}
+\label{firstpage}
+\pagerange{\pageref{firstpage}--\pageref{lastpage}}
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%% BODY OF PAPER %%%%%%%%%%%%%%%%%%
+
+\section{Context and Aims}
+
+The study of protoplanetary disks and planet formation has seen incredible progress in recent decades. The first edition of \textit{Protostars and Planets} \citet{Gehrels1978} made essentially no reference to observations of circumstellar disks during star formation. Less than four decades later, ALMA has been able to provide images of the HL Tau disk at resolutions as fine as a few AU \citet{Broganetal2015}.
+
+The aim of this project is to continue to test the limits of observations of protoplanetary disks, in particular investigating what it is possible to observe at distances greater than a few hundred parsecs.
+
+\section{Work done so far}
+
+\subsection{Flux of a typical disk at varying distance}
+
+As a preliminary exercise, I looked up the SED of HD 100546, a protoplanetary disk approximately 100pc from the Solar System. The SED shown in Figure 1 was taken from Kama et al 2014.
+
+I wanted to investigate how the observed flux from this disk would change if it was moved further away from us. Specifically, I wanted to know how far the disk could be moved while still making a $5\sigma$ detection of continuum emission in ALMA bands 3 and 7.
+
+We know that for a disk with specific intensity $I_{\nu}$, the flux density is given by:
+
+\begin{equation}
+  F_{\nu} = \frac{1}{4\pi}\int I_{\nu} d\Omega \approx \frac{\Omega}{4\pi}I_{\nu}
+  \label{eq:flux}
+\end{equation}
+
+So the flux density will scale with the angular size $\Omega$ of the disc. Since we know that
+
+\begin{equation}
+  \Omega=\frac{\pi R_{source}^{2}}{d^2}
+  \label{eq:omega}
+\end{equation}
+
+where $R_{source}$ is the radius of the disc and $d$ is its distance from the observer, we must have
+
+\begin{equation}
+  F_{\nu} \propto \frac{1}{d^2}\text{.}
+  \label{eq:scaling}
+\end{equation}
+
+Therefore we can write the flux as a function of distance using as a reference the values obtained from the SED in Band 3 and 7:
+
+\begin{equation}
+\begin{split}
+  F_{\nu} & = \frac{A}{d^2}, \\
+  A & = \begin{cases}
+               26 \, \mu Jy \quad \text{in Band 3,}\\
+               800 \, Jy \quad \text{in Band 7.}\\
+            \end{cases}
+  \label{eq:flux_dist}
+\end{split}
+\end{equation}
+
+In order to know when a 5 \sigma detection is feasible, we need to know the value of the root-mean-square noise \sigma. This is found using the equation (probably needs a reference, Radio Astronomy textbook?)
+
+\begin{equation}
+  \sigma = \frac{T_{sys}}{\sqrt{\Delta \nu \tau}}
+  \label{eq:rms}
+\end{equation}
+
+where $T_{sys}$ is the system noise temperature of the telescope, $\Delta \nu$ is the bandwidth, and $\tau$ is the observing time in seconds. The system noise temperature for different bandwidths can be found in the ALMA documentation (include a figure).
+
+Since this equation gives a value for $\sigma$ in Kelvin, I converted the flux measurements in to Kelvin by finding the associated brightness temperature $T_B$:
+
+\begin{equation}
+  T_B = \frac{v_aD^2}{3514} \( \frac{F_{\nu}}{Jy} \)
+  \label{eq:T_B}
+\end{equation}
+
+I have plotted the ratio $\frac{T_B}{\sigma}$ as a function of distance in both bands 3 and 7. As seen in the figure, the disc is detectable out to approximately x pc in Band 3, and y pc in Band 7. This seems to indicate the possibility of observing discs as far away as the Large and Small Magellanic Clouds (~50 and 60kpc respectively).
+
+Refer back to them as e.g. equation~(\ref{eq:flux_dist}).
+
+\subsection{Simulating an ALMA sky map}
+
+Figures and tables should be placed at logical positions in the text. Don't
+worry about the exact layout, which will be handled by the publishers.
+
+%Figures are referred to as e.g. Fig.~\ref{fig:example_figure}, and tables as
+%e.g. Table~\ref{tab:example_table}.
+
+% Example figure
+%\begin{figure}
+	% To include a figure from a file named example.*
+	% Allowable file formats are eps or ps if compiling using latex
+	% or pdf, png, jpg if compiling using pdflatex
+%	\includegraphics[width=\columnwidth]{example}
+%    \caption{This is an example figure. Captions appear below each figure.
+%	Give enough detail for the reader to understand what they're looking at,
+%	but leave detailed discussion to the main body of the text.}
+%    \label{fig:example_figure}
+%\end{figure}
+
+% Example table
+\begin{table}
+	\centering
+	\caption{This is an example table. Captions appear above each table.
+	Remember to define the quantities, symbols and units used.}
+	\label{tab:example_table}
+	\begin{tabular}{lccr} % four columns, alignment for each
+		\hline
+		A & B & C & D\\
+		\hline
+		1 & 2 & 3 & 4\\
+		2 & 4 & 6 & 8\\
+		3 & 5 & 7 & 9\\
+		\hline
+	\end{tabular}
+\end{table}
+
+
+\section{Further Work}
+
+The Acknowledgements section is not numbered. Here you can thank helpful
+colleagues, acknowledge funding agencies, telescopes and facilities used etc.
+Try to keep it short.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%% REFERENCES %%%%%%%%%%%%%%%%%%
+
+% The best way to enter references is to use BibTeX:
+
+%\bibliographystyle{mnras}
+%\bibliography{example} % if your bibtex file is called example.bib
+
+
+% Alternatively you could enter them by hand, like this:
+% This method is tedious and prone to error if you have lots of references
+\begin{thebibliography}{99}
+\bibitem[\protect\citeauthoryear{Gehrels}{1978}]{Gehrels1978}
+Gehrels T., 1978, \textit{Protostars and Planets}
+\bibitem[\protect\citeauthoryear{Brogan et al}{2015}]{Broganetal2015}
+Brogan C. L., 2015, The Astrophysical Journal Letters, 808, 1
+\end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Don't change these lines
+\bsp	% typesetting comment
+\label{lastpage}
+\end{document}
+
+% End of december_report.tex

@@ -2,7 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from astropy.modeling import functional_models
+from scipy import signal, integrate
 import random
+from astropy.convolution import Gaussian2DKernel, convolve
+import matplotlib.colors as clr
 
 class RightAscension:
     def __init__(self,angle):
@@ -107,7 +110,13 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513):
     freq_upper=3.7*10**11
     aperture_eff=0.74
     dishsize=12 #dish diameter in metres
+    baseline=1600 #max baseline in metres (15-1600)
 
+    resolution=0.299615052/(baseline*((0.5*(freq_upper-freq_lower))/(10**9))) #in radians
+    field_size=3.2433*10**7/(0.5*(freq_upper-freq_lower))
+
+    print resolution, field_size
+    
     distance=float(distance)
     ra=np.arange(centre_ra-(8.73*10**-8*100),centre_ra+(8.73*10**-8*100),8.73*10**-8)
     dec=np.arange(centre_dec-(8.73*10**-8*100),centre_dec+(8.73*10**-8*100),8.73*10**-8)
@@ -116,11 +125,17 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513):
     ra=np.linspace(centre_ra-(8.73*10**-8*100),centre_ra+(8.73*10**-8*100),201)
     dec=np.linspace(centre_dec-(8.73*10**-8*100),centre_dec+(8.73*10**-8*100),201)
 
+    #hopefully this one is good
+
+    step_no=np.ceil(field_size/resolution)
+    ra=np.linspace(centre_ra-(field_size/2),centre_ra+(field_size/2),step_no)
+    dec=np.linspace(centre_dec-(field_size/2),centre_dec+(field_size/2),step_no)
+
     xx,yy=np.meshgrid(ra,dec)
 
     peak_flux=800*10**4/float(distance**2) #peak flux in mJy as function of distance (using band 7 here)
 
-    fwhm=50. #in au
+    fwhm=100. #in au
     fwhm_angle=abs(np.arctan((fwhm*4.848*10**-6)/distance))
     disk_ra=ra[int(len(ra)/2)]
     disk_dec=dec[int(len(dec)/2)]
@@ -130,9 +145,9 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513):
     #Creating map of Extragalactic Background Light
 
     flux_bin_limits=[0.015,0.027,0.047,0.084,0.15,0.267,0.474,0.843,1.124]
-    log_bin_count=np.array([5.5,5.6,5.3,5,5.1,4.9,4.7,4.2,3.4])
+    log_bin_count=np.array([5.5,5.6,5.3,5.1,4.9,4.7,4.2,3.4])
     bin_count=10**log_bin_count
-    flux_bins=np.zeros((len(flux_bin_limits)-1,10))
+    flux_bins=np.zeros((len(bin_count),10))
     for i in range(len(flux_bin_limits)-1):
         flux_bins[i,:]=np.logspace(np.log10(flux_bin_limits[i]),np.log10(flux_bin_limits[i+1]),10)
 
@@ -141,14 +156,16 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513):
     adjusted_bin_count=fractional_area*bin_count
     
     mean_counts=np.random.poisson(adjusted_bin_count)
-
+    print sum(mean_counts)
+    mean_counts=30*np.ones(len(adjusted_bin_count))
+    
     for i in range(len(mean_counts)):
         if mean_counts[i]!=0:
-            for j in range(mean_counts[i]):
+            for j in range(int(mean_counts[i])):
                 source_ra=random.choice(ra)
                 source_dec=random.choice(dec)
                 source_flux=random.choice(flux_bins[i,:])
-                source=functional_models.Gaussian2D(amplitude=peak_flux,x_mean=source_ra,y_mean=source_dec,x_stddev=(8.73*10**-8)/2.355,y_stddev=(8.73*10**-8)/2.355)
+                source=functional_models.Gaussian2D(amplitude=source_flux,x_mean=source_ra,y_mean=source_dec,x_stddev=resolution/2.355,y_stddev=resolution/2.355)
                 G=G+source
     obs_time=3600 #observing time in seconds
     
@@ -169,17 +186,36 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513):
 
     #adding noise
 
-    print sigma_Jy
-
     noise=abs(np.random.normal(loc=sigma_Jy,scale=sigma_Jy,size=np.shape(z)))
     z=z+noise
+    print sigma_Jy
+    #convolving with primary beam
+    band7_freq=3.0*10**11
+    beam_fwhm=1.02*((3*10**8/band7_freq)/dishsize)
 
-    levels=np.linspace(0,np.amax(z),20)
-    #levels=np.logspace(np.log10(sigma_Jy/2),np.log10(np.amax(z)),20)
+    #using scipy.signal method
+    B_Gaussian=functional_models.Gaussian2D(x_mean=disk_ra,y_mean=disk_dec,x_stddev=beam_fwhm/2.355,y_stddev=beam_fwhm/2.355)
 
+    area=2*np.pi*(beam_fwhm)**2
+    
+    Beam=B_Gaussian(xx,yy)*(1./area)
+    
+    #image=signal.convolve2d(z,Beam,mode='same')
+
+    image=z
+    
+    #using astropy method
+    #kernel = Gaussian2DKernel(stddev=beam_fwhm/2.355)
+    #image=convolve(z,kernel)
+    image=np.log10(image)
+    levels=np.linspace(-6,np.amax(image),20)
+    #levels=np.append(np.array([0]),np.logspace(-4,np.log10(np.amax(image)),9))
+    cmap=clr.ListedColormap(['#400040','#4a1454','#542868','#5e3c7c','#685090','#7264a4','#7c78b8','#868cc2','#90a0cc','#9ab4d6'])
+
+    
     fig=plt.figure(figsize=(10,7.5))
     ax1=fig.add_subplot(111)
-    im=plt.contourf(ra,dec,z,levels)
+    im=plt.contourf(ra,dec,image,levels)
     ax2=ax1.twinx()
     ax2.plot(dec,ra_array,alpha=0.0)
     ax3=ax1.twiny()
@@ -202,4 +238,4 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513):
     fig.colorbar(im,ax=[ax1,ax2,ax3],pad=0.1)
     plt.show()
 
-    return peak_flux
+    return [np.amax(Beam), np.amax(z), np.amax(image)]

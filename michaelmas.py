@@ -20,30 +20,84 @@ class Declination:
         self.minutes=int((angle-self.degrees*(np.pi/180))/(np.pi/(180*60)))
         self.seconds=(angle-self.degrees*(np.pi/180)-self.minutes*(np.pi/(180*60)))/(np.pi/(180*60*60))
 
-def disk_distance_plot(band_nos):
+def alma_params(band_no):
+    
+    """ Gives system noise temperature, upper and lower frequencies, aperture efficiency and flux for HD 100546 at 100pc for a given ALMA band. """
+    
+    if band_no==3:
+        T_sys=60.0
+        freq_lower=8.4*10**10
+        freq_upper=1.16*10**11
+        SED_reading=2.1*10**-17
 
+    if band_no==4:
+        T_sys=82.0
+        freq_lower=1.25*10**11
+        freq_upper=1.63*10**11
+        SED_reading=1.4*10**-16
+
+    if band_no==5:
+        T_sys=105.0
+        freq_lower=1.63*10**11
+        freq_upper=2.11*10**11
+        SED_reading=5.8*10**-16
+
+    if band_no==6:
+        T_sys=136.0
+        freq_lower=2.11*10**11
+        freq_upper=2.75*10**11
+        SED_reading=1.1*10**-15
+
+    if band_no==7:
+        T_sys=219.0
+        freq_lower=2.75*10**11
+        freq_upper=3.73*10**11
+        SED_reading=2.8*10**-15
+
+    if band_no==8:
+        T_sys=292.0
+        freq_lower=3.85*10**11
+        freq_upper=5.00*10**11
+        SED_reading=8.3*10**-15
+
+    if band_no==9:
+        T_sys=261.0
+        freq_lower=6.02*10**11
+        freq_upper=7.20*10**11
+        SED_reading=3.4*10**-14
+
+    if band_no==10:
+        T_sys=344.0
+        freq_lower=7.87*10**11
+        freq_upper=9.50*10**11
+        SED_reading=6.1*10**-14
+        
+    wavelength_microns=0.5*2.998*10**14*(1./freq_upper+1./freq_lower)
+    aperture_eff=0.75*np.exp(-(4*np.pi*20/wavelength_microns)**2)
+    ref_flux=2*SED_reading/(freq_upper+freq_lower)*10**26 #in Jy
+
+    return [T_sys,freq_lower,freq_upper,aperture_eff,ref_flux]
+
+def disk_distance_plot(band_nos,hours):
+
+    legend=[]
+    
     for band_no in band_nos:
-        if band_no==3:
-            T_sys=60.0 #Band 3 parameters
-            freq_lower=8.4*10**10
-            freq_upper=1.16*10**11
-            aperture_eff=0.69
-            ref_flux=2.6*10**-28 #band 3 flux for HD 100546 in Wm-2Hz-1 from SED
-        elif band_no==7:
-            T_sys=219.0
-            freq_lower=2.75*10**11
-            freq_upper=3.7*10**11
-            aperture_eff=0.74
-            ref_flux=8*10**-27 #band 7 flux for HD 100546 in Wm-2Hz-1 from SED
+        legend.append('Band '+str(band_no))
+        params=alma_params(band_no)
+        T_sys=params[0]
+        freq_lower=params[1]
+        freq_upper=params[2]
+        aperture_eff=params[3]
+        ref_flux=params[4]
 
-        obs_time=3600 #observing time in seconds
+        obs_time=3600*hours #observing time in seconds
 
-        sigma=T_sys/((freq_upper-freq_lower)*obs_time)**0.5 #rms noise
+        sigma=290*10**-3*T_sys/(aperture_eff*((freq_upper-freq_lower)*obs_time)**0.5) #rms noise in Jy
 
-        ref_temp=aperture_eff*12**2*ref_flux*10**26/3514.0
+        print sigma
 
-        ref_snr=ref_temp/sigma
-        print ref_snr*10**4, band_no
+        ref_snr=ref_flux/sigma
 
         distance=np.logspace(0,6,50)
         snr=np.zeros(len(distance))
@@ -52,17 +106,42 @@ def disk_distance_plot(band_nos):
             snr[d]=ref_snr*10**4/float(distance[d])**2
 
         plt.plot(distance,snr,linewidth=2)
-        plt.xlim(1,np.amax(distance))
-        plt.ylim(0,np.amax(snr))
+        #plt.xlim(1,np.amax(distance))
+        plt.xlim(10**3,10**6)
+        #plt.ylim(0,np.amax(snr))
+        plt.ylim(10**-2,10**2)
         plt.xscale('log')
         plt.yscale('log')
         plt.xlabel('distance / pc')
         plt.ylabel('signal to noise ratio / sigma')
-    plt.title('SNR of HD 100546 at different distances')
-    plt.plot(distance,5*np.ones(len(distance)),'r')
-    plt.legend(['Band 3','Band 7'])
-    plt.savefig('HD_SNR.png')
+    plt.title('SNR of HD 100546 at different distances for '+str(int(hours))+' hours of observing')
+    plt.plot(distance,5*np.ones(len(distance)),'r--')
+    plt.legend(legend)
+    plt.savefig('HD_SNR_allbands.png')
     plt.show()
+
+def obs_time(band_no,snr,distance):
+    
+    """Returns required observing time (in hours) for a detection at given distance in pc at given signal to noise ratio in given band."""
+
+    params=alma_params(band_no)
+    T_sys=params[0]
+    freq_lower=params[1]
+    freq_upper=params[2]
+    aperture_eff=params[3]
+    ref_flux=params[4]
+
+    flux=ref_flux*(100**2)/(distance**2)
+    print flux
+
+    sigma=(flux/snr)*1000 #sigma in mJy
+    print sigma
+
+    time=(aperture_eff*sigma/(290*T_sys))**-2*(1/(freq_upper-freq_lower))
+
+    return time/3600
+
+    
 
 def disk_time_plot(distance):
 
@@ -81,9 +160,8 @@ def disk_time_plot(distance):
     snr=np.zeros_like(obs_time)
     
     for i in range(len(obs_time)):
-        sigma=T_sys/((freq_upper-freq_lower)*3600*obs_time[i])**0.5 #rms noise
-        temp=aperture_eff*12**2*flux*10**26/3514.0
-        snr[i]=temp/sigma
+        sigma=290*10**-3*T_sys/(aperture_eff*((freq_upper-freq_lower)*obs_time*3600)**0.5) #rms noise in Jy
+        snr[i]=flux/sigma
 
     plt.plot(obs_time,snr,linewidth=2)
     plt.xlim(1,20)
@@ -106,9 +184,8 @@ def time_dist_plot():
     distance=np.zeros_like(obs_time)
     
     for i in range(len(obs_time)):
-        sigma=T_sys/((freq_upper-freq_lower)*3600*obs_time[i])**0.5 #rms noise
-        temp=5*sigma
-        flux=3514.0*temp/(aperture_eff*144) #in Jy
+        sigma=290*10**-3*T_sys/(aperture_eff*((freq_upper-freq_lower)*obs_time*3600)**0.5) #rms noise in Jy
+        flux=5*sigma
         distance[i]=(ref_flux*10**4/flux)**0.5
 
     plt.plot(obs_time,distance/1000,linewidth=2)
@@ -120,6 +197,8 @@ def time_dist_plot():
     plt.show()
     
 def measure_sigma(band_no):
+
+    """This one needs fixing a lot."""
 
     if band_no==3:
         T_sys=60.0 #Band 3 parameters
@@ -160,14 +239,16 @@ def measure_sigma(band_no):
     plt.show()
 
 
-def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513,convolve='true'):
+def disk_contour(distance,band_no=7,centre_ra=3.0256,centre_dec=-1.22513,convolve='true'):
     
     #Note: for HD 100546 use ra=3.0256, dec=-1.22513
 
-    T_sys=219.0
-    freq_lower=2.75*10**11 #in Hz
-    freq_upper=3.7*10**11
-    aperture_eff=0.74
+    params=alma_params(band_no)
+    
+    T_sys=params[0]
+    freq_lower=params[1]
+    freq_upper=params[2]
+    aperture_eff=params[3]
     dishsize=12 #dish diameter in metres
     baseline=1600 #max baseline in metres (15-16000)
 
@@ -184,7 +265,7 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513,convolve='true'):
 
     xx,yy=np.meshgrid(ra,dec)
 
-    peak_flux=800*10/float(distance**2) #peak flux in Jy as function of distance (using band 7 here)
+    peak_flux=params[4]*10**4/float(distance**2) #peak flux in Jy as function of distance (using band 7 here)
 
     fwhm=100. #in au
     fwhm_angle=abs(np.arctan((fwhm*4.848*10**-6)/distance))
@@ -225,11 +306,11 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513,convolve='true'):
                 
     z=z+source_map
     
-    obs_time=3600 #observing time in seconds
-    
-    sigma=T_sys/((freq_upper-freq_lower)*obs_time)**0.5 #rms noise
-    sigma_Jy=3514*sigma/(aperture_eff*dishsize**2)    #sigma in Jy
+    obs_time=36000 #observing time in seconds
 
+    sigma=290*10**-3*T_sys/(aperture_eff*((freq_upper-freq_lower)*obs_time*3600)**0.5) #rms noise in Jy
+    print sigma*1000
+    
     ra_units=[]
     ra_array=np.zeros(len(ra))
     dec_units=[]
@@ -242,12 +323,12 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513,convolve='true'):
 
     #adding noise
 
-    noise=abs(np.random.normal(loc=sigma_Jy,scale=sigma_Jy,size=np.shape(z)))
+    noise=abs(np.random.normal(loc=sigma,scale=sigma,size=np.shape(z)))
     z=z+noise
 
 
-    band7_freq=3.0*10**11
-    beam_fwhm=1.02*((3*10**8/band7_freq)/dishsize)
+    freq=(freq_upper+freq_lower)/2
+    beam_fwhm=1.02*((3*10**8/freq)/dishsize)
     
     if convolve is 'true':
         #convolving with primary beam
@@ -294,12 +375,17 @@ def disk_contour(distance,centre_ra=3.0256,centre_dec=-1.22513,convolve='true'):
         beam_circ=plt.Circle((np.amin(ra)+beam_fwhm/2+2*resolution,np.amin(dec)+beam_fwhm/2+2*resolution),radius=beam_fwhm/2,color='white',fill=False)
         ax1.add_patch(beam_circ)
     
-    plt.title('HD 100546 in Band 7 at '+str(distance)+' pc')
+        plt.title('HD 100546 in Band '+str(int(band_no))+' at '+str(distance)+'pc, convolved')
 
-    #fig.savefig('convolved_disk_'+str(int(distance))+'pc.png')
+        fig.savefig('convolved_disk_'+str(int(distance))+'pc_band'+str(int(band_no))+'.png')
+        
+    else:
+        plt.title('HD 100546 in Band '+str(int(band_no))+' at '+str(distance)+'pc, unconvolved')
+        fig.savefig('unconvolved_disk_'+str(int(distance))+'pc_band'+str(int(band_no))+'.png')
+        
     plt.show()
     
-    return [z,ra,dec]
+    #return [z,ra,dec]
 
 def fits_image(distance):
     
